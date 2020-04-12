@@ -83,8 +83,8 @@ class GANModel:
             real_loss = tf.reduce_mean(tf.square(1 - real_pred))
             fake_loss = tf.reduce_mean(tf.square(fake_pred))
             loss = (fake_loss + real_loss) / 2
-        grads = tape.gradient(loss, self.generator.trainable_weights)
-        self.d_optm.apply_gradients(zip(grads, self.generator.trainable_weights))
+        grads = tape.gradient(loss, self.discriminator.trainable_weights)
+        self.d_optm.apply_gradients(zip(grads, self.discriminator.trainable_weights))
 
         return loss
 
