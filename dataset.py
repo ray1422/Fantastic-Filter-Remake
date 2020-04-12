@@ -3,7 +3,7 @@ import os
 
 import numpy
 import tensorflow as tf
-from tensorflow_core.python.data.ops.dataset_ops import AUTOTUNE
+from tensorflow.data.experimental import AUTOTUNE
 
 
 def get_dataset(dir_path, batch_size=32):
