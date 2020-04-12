@@ -96,7 +96,7 @@ class GANModel:
             x = self.generator(x, training=False)
             loss = tf.reduce_mean(tf.abs(y - x))
             losses.append(loss)
-        return tf.reduce_mean(losses).numpy()
+        return tf.reduce_mean(losses)
 
     def evaluate_discriminator(self, dataset, steps=-1):
         losses = []
@@ -110,7 +110,7 @@ class GANModel:
             fake_loss = tf.reduce_mean(tf.square(fake_pred))
             loss = (real_loss + fake_loss) / 2
             losses.append(loss)
-        return tf.reduce_mean(losses).numpy()
+        return tf.reduce_mean(losses)
 
     def fit(self, train_dataset, steps_pre_epoch=-1,
             valid_dataset: [tf.data.Dataset, None] = None, valid_steps=-1,
