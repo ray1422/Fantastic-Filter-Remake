@@ -129,22 +129,24 @@ class GANModel:
             train_writer = tf.summary.create_file_writer(f"{log_dir}/train")
             valid_writer = tf.summary.create_file_writer(f"{log_dir}/val")
         for epoch in range(epochs):
-            print(f"epoch {epoch}/{epochs}")
+            print(f"epoch {epoch} / {epochs}")
             pb = Progbar(target=steps_pre_epoch, stateful_metrics=['G_loss', 'D_loss', 'valid_G_loss', 'valid_D_loss'])
             for local_step in range(steps_pre_epoch):
                 x, y = next(td_it)
                 g_loss, g_l2_loss, gen = self.train_generator(x, y)
                 d_loss, pred_fake, pred_real = self.train_discriminator(gen, y)
                 if train_writer is not None:
-                    step = local_step + steps_pre_epoch * epochs
-                    with train_writer.as_default():
-                        tf.summary.scalar("Generator/loss_l2", g_l2_loss.numpy(), step=step)
-                        tf.summary.scalar("Generator/loss", g_loss.numpy(), step=step)
-                        tf.summary.image("images/_input", x, step=step, max_outputs=1)
-                        tf.summary.image("images/enhanced", gen, step=step, max_outputs=1)
-                        tf.summary.image("images/target", y, step=step, max_outputs=1)
-                        tf.summary.histogram("Discriminator/real", pred_real, step=step)
-                        tf.summary.histogram("Discriminator/fake", pred_fake, step=step)
+                    if local_step % 300 == 0 or (local_step % 50 == 0 and local_step < 300):
+                        step = local_step + steps_pre_epoch * epoch
+                        with train_writer.as_default():
+                            tf.summary.scalar("Generator/loss_l2", g_l2_loss.numpy(), step=step)
+                            tf.summary.scalar("Generator/loss", g_loss.numpy(), step=step)
+                            tf.summary.scalar("Discriminator/loss", d_loss.numpy(), step=step)
+                            tf.summary.image("images/_input", x, step=step, max_outputs=1)
+                            tf.summary.image("images/enhanced", gen, step=step, max_outputs=1)
+                            tf.summary.image("images/target", y, step=step, max_outputs=1)
+                            tf.summary.histogram("Discriminator/real", pred_real, step=step)
+                            tf.summary.histogram("Discriminator/fake", pred_fake, step=step)
 
                 pb.update(local_step, values=[('G_loss', g_loss), ('D_loss', d_loss)])
                 if (local_step == steps_pre_epoch - 1 or (valid_pre_steps > 0 and local_step % valid_pre_steps == 0)) \
@@ -152,6 +154,11 @@ class GANModel:
                     valid_dataset: tf.data.Dataset
                     valid_g_loss = self.evaluate_generator(valid_dataset, steps=valid_steps)
                     valid_d_loss = self.evaluate_discriminator(valid_dataset, steps=valid_steps)
+                    with valid_writer.as_default():
+                        step = local_step + steps_pre_epoch * epoch
+                        tf.summary.scalar("Generator/loss_l2", valid_g_loss.numpy(), step=step)
+                        tf.summary.scalar("Discriminator/loss", d_loss.numpy(), step=step)
+
                     pb.update(local_step + 1, [('valid_G_loss', valid_g_loss), ('valid_D_loss', valid_d_loss)])
 
                     if not save_best:
