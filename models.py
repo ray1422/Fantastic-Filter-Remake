@@ -164,8 +164,8 @@ class GANModel:
 
                     if not save_best:
                         self.generator.save(f'{checkpoints_dir}/generator.h5')
-                        self.discriminator.save(f"{checkpoints_dir}.discriminator.h5")
-                    else:
+                        self.discriminator.save(f"{checkpoints_dir}/discriminator.h5")
+                    else
                         if valid_g_loss < valid_loss_best:
                             print(f"loss improved from {valid_loss_best} to {valid_g_loss}. model saved.")
                             valid_loss_best = valid_g_loss
