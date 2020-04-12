@@ -136,7 +136,7 @@ class GANModel:
                 g_loss, g_l2_loss, gen = self.train_generator(x, y)
                 d_loss, pred_fake, pred_real = self.train_discriminator(gen, y)
                 if train_writer is not None:
-                    if local_step % 300 == 0 or (local_step % 50 == 0 and local_step < 300):
+                    if local_step % 100 == 0 or (local_step % 50 == 0 and local_step < 300):
                         step = local_step + steps_pre_epoch * epoch
                         with train_writer.as_default():
                             tf.summary.scalar("Generator/loss_l2", g_l2_loss.numpy(), step=step)
