@@ -1,11 +1,10 @@
 import tensorflow as tf
-from tensorflow.keras.optimizers import Adam
-from numpy import inf
-from tensorflow.keras.utils import Progbar
-from tensorflow.keras import Model
-from tensorflow.keras.layers import Input, Conv2D, BatchNormalization
-import tensorflow as tf
 import tensorflow.keras.backend as K
+from numpy import inf
+from tensorflow.keras import Model
+from tensorflow.keras.layers import Input, Conv2D
+from tensorflow.keras.optimizers import Adam
+from tensorflow.keras.utils import Progbar
 
 
 def get_generator():
