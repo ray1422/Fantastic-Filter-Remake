@@ -112,9 +112,10 @@ class GANModel:
             losses.append(loss)
         return tf.reduce_mean(losses).numpy()
 
-    def fit(self, train_dataset, valid_dataset: [tf.data.Dataset, None] = None, steps_pre_epoch=-1,
-            valid_steps=-1, epochs=1,
-            valid_pre_steps=-1,
+    def fit(self, train_dataset, steps_pre_epoch=-1,
+            valid_dataset: [tf.data.Dataset, None] = None, valid_steps=-1,
+            epochs=1, valid_pre_steps=-1,
+            log_dir="./logs",
             save_best=True, checkpoints_dir="./checkpoints"):
         print(f"train for {steps_pre_epoch} steps, valid for {valid_steps} steps.")
         if steps_pre_epoch == -1:
@@ -123,7 +124,8 @@ class GANModel:
             raise ValueError("valid_steps is required.")
         valid_loss_best = inf
         td_it = iter(train_dataset)
-
+        train_writer = tf.summary.create_file_writer(f"{log_dir}/train")
+        valid_writer = tf.summary.create_file_writer(f"{log_dir}/val")
         for epoch in range(epochs):
             print(f"epoch {epoch}/{epochs}")
             pb = Progbar(target=steps_pre_epoch, stateful_metrics=['G_loss', 'D_loss', 'valid_G_loss', 'valid_D_loss'])
@@ -131,6 +133,7 @@ class GANModel:
                 x, y = next(td_it)
                 g_loss, g_l2_loss, gen = self.train_generator(x, y)
                 d_loss = self.train_discriminator(gen, y)
+                # TensorBoard
                 pb.update(local_step, values=[('G_loss', g_loss), ('D_loss', d_loss)])
                 if (local_step == steps_pre_epoch - 1 or (valid_pre_steps > 0 and local_step % valid_pre_steps == 0)) \
                         and valid_dataset is not None:
@@ -141,7 +144,10 @@ class GANModel:
                     pb.update(local_step + 1, [('valid_G_loss', valid_g_loss), ('valid_D_loss', valid_d_loss)])
                     if not save_best:
                         self.generator.save(f'{checkpoints_dir}/generator.h5')
+                        self.discriminator.save(f"{checkpoints_dir}.discriminator.h5")
                     else:
                         if valid_g_loss < valid_loss_best:
                             print(f"loss improved from {valid_loss_best} to {valid_g_loss}. model saved.")
                             valid_loss_best = valid_g_loss
+                            self.generator.save(f'{checkpoints_dir}/generator.h5')
+                            self.discriminator.save(f"{checkpoints_dir}.discriminator.h5")
