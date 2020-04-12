@@ -86,7 +86,7 @@ class GANModel:
         grads = tape.gradient(loss, self.discriminator.trainable_weights)
         self.d_optm.apply_gradients(zip(grads, self.discriminator.trainable_weights))
 
-        return loss
+        return loss, fake_pred, real_pred
 
     def evaluate_generator(self, dataset, steps=-1):
         losses = []
@@ -124,24 +124,36 @@ class GANModel:
             raise ValueError("valid_steps is required.")
         valid_loss_best = inf
         td_it = iter(train_dataset)
-        train_writer = tf.summary.create_file_writer(f"{log_dir}/train")
-        valid_writer = tf.summary.create_file_writer(f"{log_dir}/val")
+        train_writer = valid_writer = None
+        if log_dir is not None:
+            train_writer = tf.summary.create_file_writer(f"{log_dir}/train")
+            valid_writer = tf.summary.create_file_writer(f"{log_dir}/val")
         for epoch in range(epochs):
             print(f"epoch {epoch}/{epochs}")
             pb = Progbar(target=steps_pre_epoch, stateful_metrics=['G_loss', 'D_loss', 'valid_G_loss', 'valid_D_loss'])
             for local_step in range(steps_pre_epoch):
                 x, y = next(td_it)
                 g_loss, g_l2_loss, gen = self.train_generator(x, y)
-                d_loss = self.train_discriminator(gen, y)
-                # TensorBoard
+                d_loss, pred_fake, pred_real = self.train_discriminator(gen, y)
+                if train_writer is not None:
+                    step = local_step + steps_pre_epoch * epochs
+                    with train_writer.as_default():
+                        tf.summary.scalar("Generator/loss_l2", g_l2_loss.numpy(), step=step)
+                        tf.summary.scalar("Generator/loss", g_loss.numpy(), step=step)
+                        tf.summary.image("images/_input", x, step=step, max_outputs=1)
+                        tf.summary.image("images/enhanced", gen, step=step, max_outputs=1)
+                        tf.summary.image("images/target", y, step=step, max_outputs=1)
+                        tf.summary.histogram("Discriminator/real", pred_real, step=step)
+                        tf.summary.histogram("Discriminator/fake", pred_fake, step=step)
+
                 pb.update(local_step, values=[('G_loss', g_loss), ('D_loss', d_loss)])
                 if (local_step == steps_pre_epoch - 1 or (valid_pre_steps > 0 and local_step % valid_pre_steps == 0)) \
                         and valid_dataset is not None:
                     valid_dataset: tf.data.Dataset
                     valid_g_loss = self.evaluate_generator(valid_dataset, steps=valid_steps)
                     valid_d_loss = self.evaluate_discriminator(valid_dataset, steps=valid_steps)
-
                     pb.update(local_step + 1, [('valid_G_loss', valid_g_loss), ('valid_D_loss', valid_d_loss)])
+
                     if not save_best:
                         self.generator.save(f'{checkpoints_dir}/generator.h5')
                         self.discriminator.save(f"{checkpoints_dir}.discriminator.h5")
