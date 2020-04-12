@@ -154,10 +154,11 @@ class GANModel:
                     valid_dataset: tf.data.Dataset
                     valid_g_loss = self.evaluate_generator(valid_dataset, steps=valid_steps)
                     valid_d_loss = self.evaluate_discriminator(valid_dataset, steps=valid_steps)
-                    with valid_writer.as_default():
-                        step = local_step + steps_pre_epoch * epoch
-                        tf.summary.scalar("Generator/loss_l2", valid_g_loss.numpy(), step=step)
-                        tf.summary.scalar("Discriminator/loss", d_loss.numpy(), step=step)
+                    if valid_writer is not None:
+                        with valid_writer.as_default():
+                            step = local_step + steps_pre_epoch * epoch
+                            tf.summary.scalar("Generator/loss_l2", valid_g_loss.numpy(), step=step)
+                            tf.summary.scalar("Discriminator/loss", d_loss.numpy(), step=step)
 
                     pb.update(local_step + 1, [('valid_G_loss', valid_g_loss), ('valid_D_loss', valid_d_loss)])
 
