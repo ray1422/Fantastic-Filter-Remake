@@ -8,6 +8,6 @@ if __name__ == '__main__':
     valid_dataset, valid_steps = get_dataset("dataset/valid", batch_size=16)
     gan.fit(train_dataset,
             steps_pre_epoch=train_steps,
-            epochs=1,
+            epochs=10,
             valid_dataset=valid_dataset,
             valid_steps=valid_steps)

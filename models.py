@@ -84,7 +84,7 @@ class GANModel:
 
     def fit(self, train_dataset, valid_dataset: [tf.data.Dataset, None] = None, steps_pre_epoch=-1,
             valid_steps=-1, epochs=1,
-            valid_pre_n_steps=-1,
+            valids_pre_steps=-1,
             save_best=True, checkpoints_dir="./checkpoints"):
         print(f"train for {steps_pre_epoch} steps, valid for {valid_steps} steps.")
         if steps_pre_epoch == -1:
@@ -93,6 +93,7 @@ class GANModel:
             raise ValueError("valid_steps is required.")
         valid_loss = inf
         td_it = iter(train_dataset)
+
         for epoch in range(epochs):
             print(f"epoch {epoch}/{epochs}")
             pb = Progbar(target=steps_pre_epoch, stateful_metrics=['G_loss', 'D_loss', 'valid_G_loss', 'valid_D_loss'])
@@ -101,7 +102,8 @@ class GANModel:
                 g_loss = self.generator.train_on_batch(x=x, y=y)
                 d_loss = self.discriminator.train_on_batch(x=y, y=x)
                 pb.update(local_step, values=[('G_loss', g_loss), ('D_loss', d_loss)])
-                if (local_step == steps_pre_epoch - 1 or local_step % valid_pre_n_steps == 0) and valid_dataset is not None:
+                if (local_step == steps_pre_epoch - 1 or (valids_pre_steps > 0 and local_step % valids_pre_steps == 0)) \
+                                                    and valid_dataset is not None:
                     valid_dataset: tf.data.Dataset
                     valid_g_loss = self.generator.evaluate(valid_dataset, verbose=0, steps=valid_steps)
                     valid_d_loss = self.discriminator.evaluate(valid_dataset.map(lambda _x, _y: (_y, _x)), verbose=0,
