@@ -2,7 +2,7 @@ import tensorflow as tf
 import tensorflow.keras.backend as K
 from numpy import inf
 from tensorflow.keras import Model
-from tensorflow.keras.layers import Input, Conv2D
+from tensorflow.keras.layers import Input, Conv2D, BatchNormalization
 from tensorflow.keras.optimizers import Adam
 from tensorflow.keras.utils import Progbar
 
