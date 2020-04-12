@@ -61,37 +61,67 @@ class GANModel:
     def __init__(self, generator: Model, discriminator: Model):
         self.generator = generator
         self.discriminator = discriminator
+        self.g_optm = Adam(learning_rate=1e-4)
+        self.d_optm = Adam(learning_rate=1e-4)
 
-    def compile(self):
-        optimizer = Adam(learning_rate=1e-4)
-        self.generator.compile(loss=lambda *args: GANModel.generator_loss(self, *args), optimizer=optimizer)
-        self.discriminator.compile(loss=lambda *args: GANModel.discriminator_loss(self, *args), optimizer=optimizer)
+    def train_generator(self, x, y):
+        with tf.GradientTape() as tape:
+            gen = self.generator(x, training=True)
+            gen_pred = self.discriminator(gen)
+            gan_loss = tf.reduce_mean(tf.square(1 - gen_pred))
+            l2_loss = tf.reduce_mean(tf.abs(gen - y))
+            loss = gan_loss + l2_loss
+        grads = tape.gradient(loss, self.generator.trainable_weights)
+        self.g_optm.apply_gradients(zip(grads, self.generator.trainable_weights))
+        return loss, l2_loss, gen
 
-    def generator_loss(self, y_true, y_pred, *args, **kwargs):
-        l1_loss = tf.reduce_mean(tf.abs(y_true - y_pred))
-        gan_loss = tf.square(1 - self.discriminator(y_pred))
-        loss = l1_loss + gan_loss
+    def train_discriminator(self, x, y):
+        # where x is the input of G, y is the real image.
+        with tf.GradientTape() as tape:
+            fake_pred = self.discriminator(x)
+            real_pred = self.discriminator(y)
+            real_loss = tf.reduce_mean(tf.square(1 - real_pred))
+            fake_loss = tf.reduce_mean(tf.square(fake_pred))
+            loss = (fake_loss + real_loss) / 2
+        grads = tape.gradient(loss, self.generator.trainable_weights)
+        self.d_optm.apply_gradients(zip(grads, self.generator.trainable_weights))
+
         return loss
 
-    def discriminator_loss(self, y_true, y_pred, *args, **kwargs):
-        # y_true: X
-        # y_pred: predict of Y
-        fake_pred = self.discriminator(self.generator(y_true))
-        real_loss = tf.reduce_mean(tf.square(tf.ones_like(tf.shape(y_pred), dtype=tf.float32) - y_pred))
-        fake_loss = tf.reduce_mean(tf.square(fake_pred))
-        loss = (real_loss + fake_loss) / 2
-        return loss
+    def evaluate_generator(self, dataset, steps=-1):
+        losses = []
+        for i, (x, y) in enumerate(dataset):
+            if i >= steps:
+                break
+            x = self.generator(x, training=False)
+            loss = tf.reduce_mean(tf.abs(y - x))
+            losses.append(loss)
+        return tf.reduce_mean(losses).numpy()
+
+    def evaluate_discriminator(self, dataset, steps=-1):
+        losses = []
+        for i, (x, y) in enumerate(dataset):
+            if i >= steps:
+                break
+            x = self.generator(x, training=False)
+            real_pred = self.discriminator(y)
+            fake_pred = self.discriminator(x)
+            real_loss = tf.reduce_mean(tf.square(1 - real_pred))
+            fake_loss = tf.reduce_mean(tf.square(fake_pred))
+            loss = (real_loss + fake_loss) / 2
+            losses.append(loss)
+        return tf.reduce_mean(losses).numpy()
 
     def fit(self, train_dataset, valid_dataset: [tf.data.Dataset, None] = None, steps_pre_epoch=-1,
             valid_steps=-1, epochs=1,
-            valids_pre_steps=-1,
+            valid_pre_steps=-1,
             save_best=True, checkpoints_dir="./checkpoints"):
         print(f"train for {steps_pre_epoch} steps, valid for {valid_steps} steps.")
         if steps_pre_epoch == -1:
             raise ValueError("step_pre_epoch is required.")
         if valid_dataset is not None and valid_steps == -1:
             raise ValueError("valid_steps is required.")
-        valid_loss = inf
+        valid_loss_best = inf
         td_it = iter(train_dataset)
 
         for epoch in range(epochs):
@@ -99,13 +129,19 @@ class GANModel:
             pb = Progbar(target=steps_pre_epoch, stateful_metrics=['G_loss', 'D_loss', 'valid_G_loss', 'valid_D_loss'])
             for local_step in range(steps_pre_epoch):
                 x, y = next(td_it)
-                g_loss = self.generator.train_on_batch(x=x, y=y)
-                d_loss = self.discriminator.train_on_batch(x=y, y=x)
+                g_loss, g_l2_loss, gen = self.train_generator(x, y)
+                d_loss = self.train_discriminator(gen, y)
                 pb.update(local_step, values=[('G_loss', g_loss), ('D_loss', d_loss)])
-                if (local_step == steps_pre_epoch - 1 or (valids_pre_steps > 0 and local_step % valids_pre_steps == 0)) \
-                                                    and valid_dataset is not None:
+                if (local_step == steps_pre_epoch - 1 or (valid_pre_steps > 0 and local_step % valid_pre_steps == 0)) \
+                        and valid_dataset is not None:
                     valid_dataset: tf.data.Dataset
-                    valid_g_loss = self.generator.evaluate(valid_dataset, verbose=0, steps=valid_steps)
-                    valid_d_loss = self.discriminator.evaluate(valid_dataset.map(lambda _x, _y: (_y, _x)), verbose=0,
-                                                               steps=valid_steps)
+                    valid_g_loss = self.evaluate_generator(valid_dataset, steps=valid_steps)
+                    valid_d_loss = self.evaluate_discriminator(valid_dataset, steps=valid_steps)
+
                     pb.update(local_step + 1, [('valid_G_loss', valid_g_loss), ('valid_D_loss', valid_d_loss)])
+                    if not save_best:
+                        self.generator.save(f'{checkpoints_dir}/generator.h5')
+                    else:
+                        if valid_g_loss < valid_loss_best:
+                            print(f"loss improved from {valid_loss_best} to {valid_g_loss}. model saved.")
+                            valid_loss_best = valid_g_loss
