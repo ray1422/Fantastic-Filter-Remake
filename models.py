@@ -41,15 +41,15 @@ def get_discriminator():
     inputs = Input(shape=(None, None, 3))
     x = inputs
     x = Conv2D(kernel_size=4, filters=64, strides=2, padding="SAME", activation=None)(x)
-    x = tf.nn.leaky_relu((x))
+    x = tf.nn.leaky_relu(x)
     x = Conv2D(kernel_size=4, filters=128, strides=2, padding="SAME", activation=None)(x)
-    x = tf.nn.leaky_relu((x))
+    x = tf.nn.leaky_relu(x)
     x = Conv2D(kernel_size=4, filters=256, strides=2, padding="SAME", activation=None)(x)
-    x = tf.nn.leaky_relu((x))
+    x = tf.nn.leaky_relu(x)
     x = Conv2D(kernel_size=4, filters=512, strides=2, padding="SAME", activation=None)(x)
-    x = tf.nn.leaky_relu((x))
+    x = tf.nn.leaky_relu(x)
     x = Conv2D(kernel_size=4, filters=512, strides=2, padding="SAME", activation=None)(x)
-    x = tf.nn.leaky_relu((x))
+    x = tf.nn.leaky_relu(x)
     x = Conv2D(kernel_size=4, filters=1, padding="SAME", activation=None)(x)
 
     model = Model(inputs=inputs, outputs=x)
@@ -69,7 +69,7 @@ class GANModel:
             gen_pred = self.discriminator(gen)
             gan_loss = tf.reduce_mean(tf.square(1 - gen_pred))
             l2_loss = tf.reduce_mean(tf.abs(gen - y))
-            loss = gan_loss + l2_loss
+            loss = gan_loss * .1 + l2_loss
         grads = tape.gradient(loss, self.generator.trainable_weights)
         self.g_optm.apply_gradients(zip(grads, self.generator.trainable_weights))
         return loss, l2_loss, gen
