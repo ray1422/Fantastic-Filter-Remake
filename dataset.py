@@ -1,6 +1,8 @@
 import glob
 import os
 import math
+import random
+
 import numpy
 import tensorflow as tf
 
@@ -25,6 +27,7 @@ def get_dataset(dir_path, batch_size=32):
         return x, y
 
     filenames = [os.path.basename(f) for f in glob.glob(f"{dir_path}/x/*g")]  # jpg, jpeg or png LOL
+    random.shuffle(filenames)
     x_dir = f"{dir_path}/x"
     y_dir = f"{dir_path}/y"
     x_files = [f'{x_dir}/{i}' for i in filenames]
@@ -32,7 +35,7 @@ def get_dataset(dir_path, batch_size=32):
     x_dataset = tf.data.Dataset.from_tensor_slices(x_files)
     y_dataset = tf.data.Dataset.from_tensor_slices(y_files)
     dataset = tf.data.Dataset.zip((x_dataset, y_dataset))
-    dataset = dataset.cache().shuffle(buffer_size=len(filenames)).repeat()\
+    dataset = dataset.cache().shuffle(buffer_size=len(filenames)).repeat() \
         .map(preprocess).batch(batch_size=batch_size).prefetch(AUTOTUNE)
 
     return dataset, math.ceil(len(filenames) / batch_size)
