@@ -2,35 +2,35 @@ import tensorflow as tf
 import tensorflow.keras.backend as K
 from numpy import inf
 from tensorflow.keras import Model
-from tensorflow.keras.layers import Input, Conv2D
+from tensorflow.keras.layers import Input, Conv2D, BatchNormalization
 from tensorflow.keras.optimizers import Adam
 from tensorflow.keras.utils import Progbar
 
 
 def get_generator():
     def _res_block(_x, filters):
-        _x1 = Conv2D(filters=filters, kernel_size=3, activation=None, padding='SAME', )(_x)
-        _x1 = Conv2D(filters=filters, kernel_size=3, activation=None, padding='SAME', )(_x1)
-        _x1 = tf.nn.leaky_relu(_x1)
+        _x1 = Conv2D(filters=filters, kernel_size=3, activation=None, padding='SAME', use_bias=False)(_x)
+        _x1 = Conv2D(filters=filters, kernel_size=3, activation=None, padding='SAME', use_bias=False)(_x1)
+        _x1 = tf.nn.leaky_relu(BatchNormalization()(_x1))
         return _x + _x1
 
     inputs = Input(shape=(None, None, 3), dtype=tf.float32)
     x = inputs
-    x = Conv2D(kernel_size=5, filters=64, padding='SAME', activation=None, )(x)
-    x = tf.nn.leaky_relu(x)
-    x = Conv2D(kernel_size=3, filters=128, strides=2, padding='SAME', activation=None, )(x)
-    x = tf.nn.leaky_relu(x)
-    x = Conv2D(kernel_size=3, filters=256, strides=2, padding='SAME', activation=None, )(x)
-    x = tf.nn.leaky_relu(x)
+    x = Conv2D(kernel_size=5, filters=64, padding='SAME', activation=None, use_bias=False)(x)
+    x = tf.nn.leaky_relu(BatchNormalization()(x))
+    x = Conv2D(kernel_size=3, filters=128, strides=2, padding='SAME', activation=None, use_bias=False)(x)
+    x = tf.nn.leaky_relu(BatchNormalization()(x))
+    x = Conv2D(kernel_size=3, filters=256, strides=2, padding='SAME', activation=None, use_bias=False)(x)
+    x = tf.nn.leaky_relu(BatchNormalization()(x))
 
     for i in range(9):
         x = _res_block(x, 256)
     x = tf.image.resize(x, K.shape(x)[1:3] * 2)
-    x = Conv2D(kernel_size=3, filters=128, strides=1, padding='SAME', activation=None, )(x)
-    x = tf.nn.leaky_relu(x)
+    x = Conv2D(kernel_size=3, filters=128, strides=1, padding='SAME', activation=None, use_bias=False)(x)
+    x = tf.nn.leaky_relu(BatchNormalization()(x))
     x = tf.image.resize(x, K.shape(x)[1:3] * 2)
-    x = Conv2D(kernel_size=3, filters=64, strides=1, padding='SAME', activation=None, )(x)
-    x = tf.nn.leaky_relu(x)
+    x = Conv2D(kernel_size=3, filters=64, strides=1, padding='SAME', activation=None, use_bias=False)(x)
+    x = tf.nn.leaky_relu(BatchNormalization()(x))
     x = Conv2D(kernel_size=3, filters=3, strides=1, padding='SAME', activation=tf.nn.tanh)(x)
 
     model = Model(inputs=inputs, outputs=x)
@@ -40,16 +40,16 @@ def get_generator():
 def get_discriminator():
     inputs = Input(shape=(None, None, 3))
     x = inputs
-    x = Conv2D(kernel_size=4, filters=64, strides=2, padding="SAME", activation=None)(x)
-    x = tf.nn.leaky_relu(x)
-    x = Conv2D(kernel_size=4, filters=128, strides=2, padding="SAME", activation=None)(x)
-    x = tf.nn.leaky_relu(x)
-    x = Conv2D(kernel_size=4, filters=256, strides=2, padding="SAME", activation=None)(x)
-    x = tf.nn.leaky_relu(x)
-    x = Conv2D(kernel_size=4, filters=512, strides=2, padding="SAME", activation=None)(x)
-    x = tf.nn.leaky_relu(x)
-    x = Conv2D(kernel_size=4, filters=512, strides=2, padding="SAME", activation=None)(x)
-    x = tf.nn.leaky_relu(x)
+    x = Conv2D(kernel_size=4, filters=64, strides=2, padding="SAME", use_bias=False, activation=None)(x)
+    x = tf.nn.leaky_relu(BatchNormalization()(x))
+    x = Conv2D(kernel_size=4, filters=128, strides=2, padding="SAME", use_bias=False, activation=None)(x)
+    x = tf.nn.leaky_relu(BatchNormalization()(x))
+    x = Conv2D(kernel_size=4, filters=256, strides=2, padding="SAME", use_bias=False, activation=None)(x)
+    x = tf.nn.leaky_relu(BatchNormalization()(x))
+    x = Conv2D(kernel_size=4, filters=512, strides=2, padding="SAME", use_bias=False, activation=None)(x)
+    x = tf.nn.leaky_relu(BatchNormalization()(x))
+    x = Conv2D(kernel_size=4, filters=512, strides=2, padding="SAME", use_bias=False, activation=None)(x)
+    x = tf.nn.leaky_relu(BatchNormalization()(x))
     x = Conv2D(kernel_size=4, filters=1, padding="SAME", activation=None)(x)
 
     model = Model(inputs=inputs, outputs=x)
