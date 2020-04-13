@@ -69,7 +69,7 @@ class GANModel:
             gen_pred = self.discriminator(gen)
             gan_loss = tf.reduce_mean(tf.square(1 - gen_pred))
             l2_loss = tf.reduce_mean(tf.abs(gen - y))
-            loss = gan_loss * .1 + l2_loss
+            loss = gan_loss * .7 + l2_loss
         grads = tape.gradient(loss, self.generator.trainable_weights)
         self.g_optm.apply_gradients(zip(grads, self.generator.trainable_weights))
         return loss, l2_loss, gen
@@ -169,4 +169,4 @@ class GANModel:
                             print(f"loss improved from {valid_loss_best} to {valid_g_loss}. model saved.")
                             valid_loss_best = valid_g_loss
                             self.generator.save(f'{checkpoints_dir}/generator.h5')
-                            self.discriminator.save(f"{checkpoints_dir}.discriminator.h5")
+                            self.discriminator.save(f"{checkpoints_dir}/discriminator.h5")

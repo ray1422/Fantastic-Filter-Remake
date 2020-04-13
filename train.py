@@ -1,8 +1,8 @@
 from dataset import get_dataset
 from models import get_generator, get_discriminator, GANModel
 
-BATCH_SIZE = 16
-EPOCHS = 10
+BATCH_SIZE = 12
+EPOCHS = 100
 if __name__ == '__main__':
     gan = GANModel(generator=get_generator(), discriminator=get_discriminator())
     train_dataset, train_steps = get_dataset("dataset/train", batch_size=BATCH_SIZE)
